@@ -8,17 +8,71 @@ import Grid from "@mui/material/Grid";
 import Snackbar from "@mui/material/Snackbar";
 import Typography from "@mui/material/Typography";
 import logo from "../../assets/logo.svg";
-import {
-  getEmailErrorMessage,
-  getPasswordErrorMessage,
-  getPasswordProperties,
-  isValidEmail,
-  isValidPassword,
-} from "../../helpers/validation";
+import * as EmailValidator from "email-validator";
+
+export function isValidEmail(email) {
+  return EmailValidator.validate(email);
+}
+
+export function getPasswordProperties(password) {
+  let upperFormat = "^(?=.*[A-Z])";
+  let lowerFormat = "^(?=.*[a-z])";
+  // eslint-disable-next-line no-useless-escape
+  let specialFormat = /[`!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/;
+  let numberFormat = "^(?=.*[0-9])";
+  const lengthCorrect = password.length >= 8;
+  const upperCorrect = password.match(upperFormat) ? true : false;
+  const lowerCorrect = password.match(lowerFormat) ? true : false;
+  const specialCorrect = password.match(specialFormat) ? true : false;
+  const numberCorrect = password.match(numberFormat) ? true : false;
+  return {
+    lengthCorrect,
+    upperCorrect,
+    lowerCorrect,
+    specialCorrect,
+    numberCorrect,
+  };
+}
+
+export function isValidPassword(passwordProperties) {
+  return (
+    passwordProperties.lengthCorrect &&
+    passwordProperties.lowerCorrect &&
+    passwordProperties.upperCorrect &&
+    passwordProperties.specialCorrect &&
+    passwordProperties.numberCorrect
+  );
+}
+
+export function getEmailErrorMessage(emailValid) {
+  if (!emailValid) {
+    return "Please enter valid email address";
+  }
+  return "";
+}
+
+export function getPasswordErrorMessage(passwordProperties) {
+  if (!passwordProperties.lengthCorrect) {
+    return "Password should contain 8 or more characters";
+  }
+  if (!passwordProperties.upperCorrect || !passwordProperties.lowerCorrect) {
+    return "Password should contain a minimum of 1 uppercase and lowercase letter";
+  }
+  if (!passwordProperties.numberCorrect) {
+    return "Password should contain a minimum of 1 digit of numeric value";
+  }
+  if (!passwordProperties.specialCorrect) {
+    return "Password should contain a minimum of 1 special character";
+  }
+
+  return "";
+}
 
 export default function LoginForm() {
   const [showAlert, setShowAlert] = useState(false);
+  const [emailValid, setEmailValid] = useState(true);
   const [emailErrorString, setEmailErrorString] = useState("");
+  const [passwordValid, setPasswordValid] = useState(true);
   const [passwordErrorString, setPasswordErrorString] = useState("");
 
   const validateForm = (event) => {
@@ -28,10 +82,12 @@ export default function LoginForm() {
     const password = data.get("password");
 
     const validEmail = isValidEmail(email);
+    setEmailValid(validEmail);
     setEmailErrorString(getEmailErrorMessage(validEmail));
 
     const passwordProperties = getPasswordProperties(password);
     const validPassword = isValidPassword(passwordProperties);
+    setPasswordValid(validPassword);
     setPasswordErrorString(getPasswordErrorMessage(passwordProperties));
 
     return validEmail && validPassword;
@@ -39,12 +95,14 @@ export default function LoginForm() {
 
   const resetEmailField = (event) => {
     event.preventDefault();
+    setEmailValid(true);
     setEmailErrorString("");
     setShowAlert(false);
   };
 
   const resetPasswordField = (event) => {
     event.preventDefault();
+    setPasswordValid(true);
     setPasswordErrorString("");
     setShowAlert(false);
   };
@@ -126,7 +184,7 @@ export default function LoginForm() {
               autoComplete="email"
               autoFocus
               onInput={resetEmailField}
-              error={emailErrorString !== ""}
+              error={!emailValid}
               helperText={emailErrorString}
             />
             <TextField
@@ -139,7 +197,7 @@ export default function LoginForm() {
               id="password"
               autoComplete="current-password"
               onInput={resetPasswordField}
-              error={passwordErrorString !== ""}
+              error={!passwordValid}
               helperText={passwordErrorString}
             />
             <Button
